@@ -37,7 +37,8 @@ namespace SapNwRfc.Tests.Internal
                 {
                     ei = default;
                     sl = stringLength;
-                    if (buffer.Length <= 0 || bufferLength <= 0) return;
+                    if (buffer.Length <= 0 || bufferLength <= 0)
+                        return;
                     Array.Copy(stringValue.ToCharArray(), buffer, stringValue.Length);
                 }))
                 .Returns(resultCodeQueue.Dequeue);
@@ -107,6 +108,36 @@ namespace SapNwRfc.Tests.Internal
         }
 
         [Theory]
+        [InlineData('X', true)]
+        [InlineData(' ', false)]
+        [InlineData('?', false)]
+        public void Extract_Boolean_ShouldMapFromBoolean(char charValue, bool expectedBoolValue)
+        {
+            // Arrange
+            RfcErrorInfo errorInfo;
+            char[] value = { charValue };
+            _interopMock
+                .Setup(x => x.GetChars(It.IsAny<IntPtr>(), It.IsAny<string>(), It.IsAny<char[]>(), It.IsAny<uint>(), out errorInfo))
+                .Callback(new GetCharsCallback((IntPtr dataHandle, string name, char[] buffer, uint bufferLength, out RfcErrorInfo ei) =>
+                {
+                    Array.Copy(value, buffer, value.Length);
+                    ei = default;
+                }));
+
+            // Act
+            BooleanModel result = OutputMapper.Extract<BooleanModel>(_interopMock.Object, DataHandle);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.BooleanValue.Should().Be(expectedBoolValue);
+        }
+
+        private sealed class BooleanModel
+        {
+            public bool BooleanValue { get; set; }
+        }
+
+        [Theory]
         [InlineData(66778L)]
         [InlineData(long.MinValue)]
         [InlineData(long.MaxValue)]
@@ -172,7 +203,8 @@ namespace SapNwRfc.Tests.Internal
                 {
                     ei = default;
                     sl = stringLength;
-                    if (buffer.Length <= 0 || bufferLength <= 0) return;
+                    if (buffer.Length <= 0 || bufferLength <= 0)
+                        return;
                     Array.Copy(stringValue.ToCharArray(), buffer, stringValue.Length);
                 }))
                 .Returns(resultCodeQueue.Dequeue);
@@ -467,6 +499,96 @@ namespace SapNwRfc.Tests.Internal
             public DateTime DateTimeValue { get; set; }
 
             public DateTime? NullableDateTimeValue { get; set; }
+        }
+
+        [Fact]
+        public void Extract_DateOnly_ShouldMapFromDate()
+        {
+            // Arrange
+            const string value = "20200405";
+            RfcErrorInfo errorInfo;
+            _interopMock
+                .Setup(x => x.GetDate(It.IsAny<IntPtr>(), It.IsAny<string>(), It.IsAny<char[]>(), out errorInfo))
+                .Callback(new GetDateCallback((IntPtr dataHandle, string name, char[] buffer, out RfcErrorInfo ei) =>
+                {
+                    Array.Copy(value.ToCharArray(), buffer, value.Length);
+                    ei = default;
+                }));
+
+            // Act
+            DateOnlyModel result = OutputMapper.Extract<DateOnlyModel>(_interopMock.Object, DataHandle);
+
+            // Assert
+            _interopMock.Verify(
+                x => x.GetDate(DataHandle, "DATEONLYVALUE", It.IsAny<char[]>(), out errorInfo),
+                Times.Once);
+            _interopMock.Verify(
+                x => x.GetDate(DataHandle, "NULLABLEDATEONLYVALUE", It.IsAny<char[]>(), out errorInfo),
+                Times.Once);
+            result.Should().NotBeNull();
+            result.DateOnlyValue.Should().Be(new DateOnly(2020, 04, 05));
+            result.NullableDateOnlyValue.Should().Be(new DateOnly(2020, 04, 05));
+        }
+
+        [Theory]
+        [InlineData("00000000")]
+        [InlineData("        ")]
+        [InlineData("abcdefgh")]
+        public void Extract_NonNullableDateOnly_ZeroOrEmptyOrInvalidDate_ShouldMapToMinimumDateOnly(string value)
+        {
+            // Arrange
+            RfcErrorInfo errorInfo;
+            _interopMock
+                .Setup(x => x.GetDate(It.IsAny<IntPtr>(), It.IsAny<string>(), It.IsAny<char[]>(), out errorInfo))
+                .Callback(new GetDateCallback((IntPtr dataHandle, string name, char[] buffer, out RfcErrorInfo ei) =>
+                {
+                    Array.Copy(value.ToCharArray(), buffer, value.Length);
+                    ei = default;
+                }));
+
+            // Act
+            DateOnlyModel result = OutputMapper.Extract<DateOnlyModel>(_interopMock.Object, DataHandle);
+
+            // Assert
+            _interopMock.Verify(
+                x => x.GetDate(DataHandle, "DATEONLYVALUE", It.IsAny<char[]>(), out errorInfo),
+                Times.Once);
+            result.Should().NotBeNull();
+            result.DateOnlyValue.Should().Be(DateOnly.MinValue);
+        }
+
+        [Theory]
+        [InlineData("00000000")]
+        [InlineData("        ")]
+        [InlineData("abcdefgh")]
+        public void Extract_NullableDateOnly_ZeroOrEmptyOrInvalidDate_ShouldMapToNullDateOnly(string value)
+        {
+            // Arrange
+            RfcErrorInfo errorInfo;
+            _interopMock
+                .Setup(x => x.GetDate(It.IsAny<IntPtr>(), It.IsAny<string>(), It.IsAny<char[]>(), out errorInfo))
+                .Callback(new GetDateCallback((IntPtr dataHandle, string name, char[] buffer, out RfcErrorInfo ei) =>
+                {
+                    Array.Copy(value.ToCharArray(), buffer, value.Length);
+                    ei = default;
+                }));
+
+            // Act
+            DateOnlyModel result = OutputMapper.Extract<DateOnlyModel>(_interopMock.Object, DataHandle);
+
+            // Assert
+            _interopMock.Verify(
+                x => x.GetDate(DataHandle, "NULLABLEDATEONLYVALUE", It.IsAny<char[]>(), out errorInfo),
+                Times.Once);
+            result.Should().NotBeNull();
+            result.NullableDateOnlyValue.Should().BeNull();
+        }
+
+        private sealed class DateOnlyModel
+        {
+            public DateOnly DateOnlyValue { get; set; }
+
+            public DateOnly? NullableDateOnlyValue { get; set; }
         }
 
         private delegate void GetTimeCallback(IntPtr dataHandle, string name, char[] buffer, out RfcErrorInfo errorInfo);

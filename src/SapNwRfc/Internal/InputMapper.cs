@@ -112,11 +112,22 @@ namespace SapNwRfc.Internal
                 // new CharsField(name, value);
                 fieldConstructor = GetFieldConstructor(() => new CharsField(default, default));
             }
+            else if (propertyInfo.PropertyType == typeof(bool))
+            {
+                // new CharsField(name, value);
+                fieldConstructor = GetFieldConstructor(() => new BooleanField(default, default));
+            }
             else if (propertyInfo.PropertyType == typeof(DateTime) || propertyInfo.PropertyType == typeof(DateTime?))
             {
                 // new RfcDateField(name, (DateTime?)value);
                 fieldConstructor = GetFieldConstructor(() => new DateField(default, default));
                 property = Expression.Convert(property, typeof(DateTime?));
+            }
+            else if (propertyInfo.PropertyType == typeof(DateOnly) || propertyInfo.PropertyType == typeof(DateOnly?))
+            {
+                // new RfcDateField(name, (DateOnly?)value);
+                fieldConstructor = GetFieldConstructor(() => new DateOnlyField(default, default));
+                property = Expression.Convert(property, typeof(DateOnly?));
             }
             else if (propertyInfo.PropertyType == typeof(TimeSpan) || propertyInfo.PropertyType == typeof(TimeSpan?))
             {

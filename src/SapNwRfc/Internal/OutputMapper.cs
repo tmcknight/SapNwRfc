@@ -108,10 +108,19 @@ namespace SapNwRfc.Internal
                 SapBufferLengthAttribute bufferLengthAttribute = propertyInfo.GetCustomAttribute<SapBufferLengthAttribute>();
                 arguments.Add(Expression.Constant(bufferLengthAttribute?.BufferLength ?? 0));
             }
+            else if (propertyInfo.PropertyType == typeof(bool))
+            {
+                extractMethod = GetMethodInfo(() => BooleanField.Extract(default, default, default));
+            }
             else if (propertyInfo.PropertyType == typeof(DateTime) || propertyInfo.PropertyType == typeof(DateTime?))
             {
                 convertToNonNullable = propertyInfo.PropertyType == typeof(DateTime);
                 extractMethod = GetMethodInfo(() => DateField.Extract(default, default, default));
+            }
+            else if (propertyInfo.PropertyType == typeof(DateOnly) || propertyInfo.PropertyType == typeof(DateOnly?))
+            {
+                convertToNonNullable = propertyInfo.PropertyType == typeof(DateOnly);
+                extractMethod = GetMethodInfo(() => DateOnlyField.Extract(default, default, default));
             }
             else if (propertyInfo.PropertyType == typeof(TimeSpan) || propertyInfo.PropertyType == typeof(TimeSpan?))
             {

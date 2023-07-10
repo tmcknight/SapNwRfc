@@ -55,6 +55,32 @@ namespace SapNwRfc.Tests.Internal
         }
 
         [Fact]
+        public void Apply_BooleanTrue_ShouldMapAsTrue()
+        {
+            // Arrange
+            RfcErrorInfo errorInfo;
+
+            // Act
+            InputMapper.Apply(_interopMock.Object, DataHandle, new { SomeBoolean = true });
+
+            // Assert
+            _interopMock.Verify(x => x.SetChars(DataHandle, "SOMEBOOLEAN", new char[] { 'X' }, 1, out errorInfo));
+        }
+
+        [Fact]
+        public void Apply_BooleanFalse_ShouldMapAsFalse()
+        {
+            // Arrange
+            RfcErrorInfo errorInfo;
+
+            // Act
+            InputMapper.Apply(_interopMock.Object, DataHandle, new { SomeBoolean = false });
+
+            // Assert
+            _interopMock.Verify(x => x.SetChars(DataHandle, "SOMEBOOLEAN", new char[] { ' ' }, 1, out errorInfo));
+        }
+
+        [Fact]
         public void Apply_Int_ShouldMapAsInt()
         {
             // Arrange
@@ -181,11 +207,47 @@ namespace SapNwRfc.Tests.Internal
         }
 
         [Fact]
+        public void Apply_DateOnly_ShouldMapAsDate()
+        {
+            // Arrange
+            RfcErrorInfo errorInfo;
+            var date = new DateOnly(2020, 4, 1);
+
+            // Act
+            InputMapper.Apply(_interopMock.Object, DataHandle, new { SomeDate = date });
+
+            // Assert
+            _interopMock.Verify(x => x.SetDate(
+                DataHandle,
+                "SOMEDATE",
+                It.Is<char[]>(y => y.SequenceEqual("20200401")),
+                out errorInfo));
+        }
+
+        [Fact]
         public void Apply_NullableDateTime_HasValue_ShouldMapAsDate()
         {
             // Arrange
             RfcErrorInfo errorInfo;
             DateTime? date = new DateTime(2020, 4, 1);
+
+            // Act
+            InputMapper.Apply(_interopMock.Object, DataHandle, new { SomeDate = date });
+
+            // Assert
+            _interopMock.Verify(x => x.SetDate(
+                DataHandle,
+                "SOMEDATE",
+                It.Is<char[]>(y => y.SequenceEqual("20200401")),
+                out errorInfo));
+        }
+
+        [Fact]
+        public void Apply_NullableDateOnly_HasValue_ShouldMapAsDate()
+        {
+            // Arrange
+            RfcErrorInfo errorInfo;
+            DateOnly? date = new DateOnly(2020, 4, 1);
 
             // Act
             InputMapper.Apply(_interopMock.Object, DataHandle, new { SomeDate = date });
@@ -206,6 +268,25 @@ namespace SapNwRfc.Tests.Internal
 
             // Act
             InputMapper.Apply(_interopMock.Object, DataHandle, new { SomeDate = (DateTime?)null });
+
+            // Assert
+            _interopMock.Verify(
+                x => x.SetDate(
+                    DataHandle,
+                    "SOMEDATE",
+                    It.Is<char[]>(y => y.SequenceEqual("00000000")),
+                    out errorInfo),
+                Times.Once);
+        }
+
+        [Fact]
+        public void Apply_NullableDateOnly_NullValue_ShouldMapAsZeroDate()
+        {
+            // Arrange
+            RfcErrorInfo errorInfo;
+
+            // Act
+            InputMapper.Apply(_interopMock.Object, DataHandle, new { SomeDate = (DateOnly?)null });
 
             // Assert
             _interopMock.Verify(
